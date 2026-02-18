@@ -66,8 +66,9 @@ class PageController
             $name = $_POST['name'] ?? '';
             $password = $_POST['password'] ?? '';
             
-            if (strlen($password) < 6) {
-                $this->render('register', ['error' => 'A jelszónak minimum 6 karakternek kell lennie']);
+            $passwordErrors = Security::validatePasswordStrength($password, 8);
+            if (!empty($passwordErrors)) {
+                $this->render('register', ['error' => implode('. ', $passwordErrors) . '.']);
                 return;
             }
             

@@ -3,15 +3,39 @@ error_reporting(0);
 ini_set('display_errors', 0);
 
 session_start();
+session_regenerate_id(true);
 
-header("Access-Control-Allow-Origin: *");
+require_once __DIR__ . '/app/core/Security.php';
+
+$allowedOrigins = Security::getAllowedOrigins();
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+if (in_array($origin, $allowedOrigins, true)) {
+    header("Access-Control-Allow-Origin: {$origin}");
+} else {
+    header("Access-Control-Allow-Origin: " . $allowedOrigins[0]);
+}
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type");
+header("Access-Control-Allow-Headers: Content-Type, X-CSRF-Token");
+header("Access-Control-Allow-Credentials: true");
 header("Content-Type: application/json; charset=UTF-8");
+
+Security::setSecurityHeaders();
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
+}
+
+$publicActions = ['login', 'register', 'check_session', 'newsletter_subscribe', 'newsletter_unsubscribe', 'newsletter_check'];
+
+$action = $_GET['action'] ?? '';
+
+if (!in_array($action, $publicActions, true)) {
+    if (!isset($_SESSION['user_id'])) {
+        http_response_code(401);
+        echo json_encode(['error' => 'Bejelentkezés szükséges']);
+        exit;
+    }
 }
 
 try {
@@ -36,8 +60,9 @@ try {
 
     $db = Database::getInstance();
 } catch (Exception $e) {
+    error_log($e->getMessage());
     http_response_code(500);
-    echo json_encode(['error' => 'Adatbázis hiba: ' . $e->getMessage()]);
+    echo json_encode(['error' => 'Belső szerver hiba']);
     exit;
 }
 

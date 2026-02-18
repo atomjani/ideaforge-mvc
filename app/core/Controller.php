@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/Security.php';
+
 class Controller
 {
     protected $db;
@@ -10,6 +12,7 @@ class Controller
     {
         $this->db = Database::getInstance();
         $this->checkSession();
+        Security::setSecurityHeaders();
     }
     
     protected function checkSession()
@@ -17,6 +20,8 @@ class Controller
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
+        
+        session_regenerate_id(true);
         
         if (isset($_SESSION['user_id'])) {
             $this->user = [
@@ -41,6 +46,13 @@ class Controller
         $this->requireLogin();
         if (!$this->isAdmin) {
             $this->jsonResponse(['error' => 'Nincs jogosultság'], 403);
+        }
+    }
+    
+    protected function requireCsrf()
+    {
+        if (!Security::checkCsrfToken()) {
+            $this->jsonResponse(['error' => 'Érvénytelen token'], 403);
         }
     }
     
@@ -92,6 +104,11 @@ class Controller
     
     protected function render($view, $data = [])
     {
+        $view = preg_replace('/[^a-zA-Z0-9_]/', '', $view);
+        
+        $data['csrf_token'] = Security::getCsrfToken();
+        $data['csrf_field'] = Security::csrfField();
+        
         extract($data);
         
         $viewFile = "../app/views/pages/{$view}.php";

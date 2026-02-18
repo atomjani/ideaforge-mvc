@@ -6,6 +6,8 @@ abstract class Model
     protected $table;
     protected $primaryKey = 'id';
     
+    private $allowedOrderColumns = [];
+    
     public function __construct()
     {
         $this->db = Database::getInstance();
@@ -15,11 +17,25 @@ abstract class Model
     {
         $sql = "SELECT * FROM {$this->table}";
         
-        if ($orderBy) {
-            $sql .= " ORDER BY {$orderBy}";
+        if ($orderBy && !empty($this->allowedOrderColumns)) {
+            $orderBy = preg_replace('/[^a-zA-Z0-9_,]/', '', $orderBy);
+            $parts = explode(',', $orderBy);
+            $validParts = [];
+            foreach ($parts as $part) {
+                $col = trim(explode(' ', $part)[0]);
+                if (in_array($col, $this->allowedOrderColumns, true)) {
+                    $validParts[] = $part;
+                }
+            }
+            if (!empty($validParts)) {
+                $sql .= " ORDER BY " . implode(', ', $validParts);
+            }
         }
         
         if ($limit) {
+            $limit = (int)$limit;
+            if ($limit > 100) $limit = 100;
+            if ($limit < 1) $limit = 1;
             $sql .= " LIMIT {$limit}";
         }
         
@@ -80,12 +96,6 @@ abstract class Model
     
     protected function generateUuid()
     {
-        return sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
-            mt_rand(0, 0xffff), mt_rand(0, 0xffff),
-            mt_rand(0, 0xffff),
-            mt_rand(0, 0x0fff) | 0x4000,
-            mt_rand(0, 0x3fff) | 0x8000,
-            mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
-        );
+        return bin2hex(random_bytes(16));
     }
 }

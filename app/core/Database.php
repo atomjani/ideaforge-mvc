@@ -16,10 +16,20 @@ class Database
     
     private function __construct()
     {
-        $this->host = getenv('DB_HOST') ?: 'localhost';
-        $this->dbname = getenv('DB_NAME') ?: 'kalandja_ideaforge';
-        $this->username = getenv('DB_USER') ?: 'kalandja_Ideaforge';
-        $this->password = getenv('DB_PASS') ?: 'Gamestar.1986';
+        $configFile = __DIR__ . '/../../config.php';
+        if (file_exists($configFile)) {
+            $config = include $configFile;
+            $this->host = defined('DB_HOST') ? DB_HOST : 'localhost';
+            $this->dbname = defined('DB_NAME') ? DB_NAME : 'ideaforge';
+            $this->username = defined('DB_USER') ? DB_USER : 'ideaforge';
+            $this->password = defined('DB_PASS') ? DB_PASS : '';
+        } else {
+            $this->host = getenv('DB_HOST') ?: 'localhost';
+            $this->dbname = getenv('DB_NAME') ?: 'ideaforge';
+            $this->username = getenv('DB_USER') ?: 'ideaforge';
+            $this->password = getenv('DB_PASS') ?: '';
+        }
+        
         $this->charset = 'utf8mb4';
         
         $dsn = "mysql:host={$this->host};dbname={$this->dbname};charset={$this->charset}";

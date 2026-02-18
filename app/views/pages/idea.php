@@ -391,19 +391,26 @@ async function quickStatusChange(taskId, newStatus) {
     }
 }
 
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 async function loadComments(taskId) {
     const res = await fetch('/api.php?action=get_comments&task_id=' + taskId);
     const comments = await res.json();
     
     const container = document.getElementById('commentsList');
     if (comments.error) {
-        container.innerHTML = '<p class="text-red-500">' + (comments.error || 'Hiba') + '</p>';
+        container.innerHTML = '<p class="text-red-500">Hiba történt</p>';
         return;
     }
     container.innerHTML = comments.map(c => `
         <div class="bg-gray-50 rounded p-2">
-            <p class="text-sm">${c.text}</p>
-            <p class="text-xs text-gray-500">${c.user_name || 'Ismeretlen'} - ${new Date(c.created_at).toLocaleString('hu-HU')}</p>
+            <p class="text-sm">${escapeHtml(c.text)}</p>
+            <p class="text-xs text-gray-500">${escapeHtml(c.user_name || 'Ismeretlen')} - ${new Date(c.created_at).toLocaleString('hu-HU')}</p>
         </div>
     `).join('');
 }
