@@ -15,6 +15,48 @@ $isAdmin = ($_SESSION['user_role'] ?? '') === 'admin';
     <h2 class="text-lg font-semibold mb-4">Új visszajelzés</h2>
     <form method="POST">
         <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Értékelés (opcionális)</label>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="text-center">
+                    <label class="block text-xs text-gray-500 mb-1">Összesített</label>
+                    <div class="flex justify-center gap-1">
+                        <?php for ($i = 1; $i <= 5; $i++): ?>
+                        <button type="button" class="text-2xl text-gray-300 hover:text-yellow-500" onclick="setRating('overall', <?= $i ?>)" id="star-overall-<?= $i ?>">★</button>
+                        <?php endfor; ?>
+                    </div>
+                    <input type="hidden" name="rating_overall" id="rating-overall" value="0">
+                </div>
+                <div class="text-center">
+                    <label class="block text-xs text-gray-500 mb-1">Ötletek</label>
+                    <div class="flex justify-center gap-1">
+                        <?php for ($i = 1; $i <= 5; $i++): ?>
+                        <button type="button" class="text-2xl text-gray-300 hover:text-yellow-500" onclick="setRating('ideas', <?= $i ?>)" id="star-ideas-<?= $i ?>">★</button>
+                        <?php endfor; ?>
+                    </div>
+                    <input type="hidden" name="rating_ideas" id="rating-ideas" value="0">
+                </div>
+                <div class="text-center">
+                    <label class="block text-xs text-gray-500 mb-1">Feladatok</label>
+                    <div class="flex justify-center gap-1">
+                        <?php for ($i = 1; $i <= 5; $i++): ?>
+                        <button type="button" class="text-2xl text-gray-300 hover:text-yellow-500" onclick="setRating('tasks', <?= $i ?>)" id="star-tasks-<?= $i ?>">★</button>
+                        <?php endfor; ?>
+                    </div>
+                    <input type="hidden" name="rating_tasks" id="rating-tasks" value="0">
+                </div>
+                <div class="text-center">
+                    <label class="block text-xs text-gray-500 mb-1">Kezelőfelület</label>
+                    <div class="flex justify-center gap-1">
+                        <?php for ($i = 1; $i <= 5; $i++): ?>
+                        <button type="button" class="text-2xl text-gray-300 hover:text-yellow-500" onclick="setRating('ui', <?= $i ?>)" id="star-ui-<?= $i ?>">★</button>
+                        <?php endfor; ?>
+                    </div>
+                    <input type="hidden" name="rating_ui" id="rating-ui" value="0">
+                </div>
+            </div>
+        </div>
+        
+        <div class="mb-4">
             <label class="block text-sm font-medium text-gray-700 mb-2">Típus</label>
             <div class="flex flex-wrap gap-2 sm:gap-3">
                 <label class="flex items-center px-3 py-2 border rounded-lg cursor-pointer hover:bg-gray-50 text-sm">
@@ -39,6 +81,22 @@ $isAdmin = ($_SESSION['user_role'] ?? '') === 'admin';
     </form>
 </div>
 
+<script>
+function setRating(type, rating) {
+    document.getElementById('rating-' + type).value = rating;
+    for (let i = 1; i <= 5; i++) {
+        const star = document.getElementById('star-' + type + '-' + i);
+        if (i <= rating) {
+            star.classList.remove('text-gray-300');
+            star.classList.add('text-yellow-500');
+        } else {
+            star.classList.remove('text-yellow-500');
+            star.classList.add('text-gray-300');
+        }
+    }
+}
+</script>
+
 <h2 class="text-xl font-semibold mb-4"><?= $isAdmin ? 'Összes visszajelzés' : 'Saját visszajelzések' ?></h2>
 
 <?php if (empty($feedbacks)): ?>
@@ -56,9 +114,23 @@ $isAdmin = ($_SESSION['user_role'] ?? '') === 'admin';
                 <span class="text-xs text-gray-500 ml-2">(<?= htmlspecialchars($f['user_name']) ?>)</span>
                 <?php endif; ?>
             </div>
-            <span class="text-xs text-gray-500"><?= date('Y.m.d H:i', strtotime($f['created_at'])) ?></span>
+            <div class="flex items-center gap-1">
+                <?php if ($f['rating_overall'] > 0): ?>
+                <?php for ($i = 1; $i <= 5; $i++): ?>
+                <span class="<?= $i <= $f['rating_overall'] ? 'text-yellow-500' : 'text-gray-300' ?>">★</span>
+                <?php endfor; ?>
+                <?php endif; ?>
+                <span class="text-xs text-gray-500 ml-2"><?= date('Y.m.d H:i', strtotime($f['created_at'])) ?></span>
+            </div>
         </div>
         <p class="mt-2 text-gray-700"><?= htmlspecialchars($f['message']) ?></p>
+        <?php if ($f['rating_overall'] > 0): ?>
+        <div class="mt-2 flex gap-4 text-xs text-gray-500">
+            <?php if ($f['rating_ideas'] > 0): ?><span>Ötletek: <?= $f['rating_ideas'] ?>/5 ★</span><?php endif; ?>
+            <?php if ($f['rating_tasks'] > 0): ?><span>Feladatok: <?= $f['rating_tasks'] ?>/5 ★</span><?php endif; ?>
+            <?php if ($f['rating_ui'] > 0): ?><span>UI: <?= $f['rating_ui'] ?>/5 ★</span><?php endif; ?>
+        </div>
+        <?php endif; ?>
     </div>
     <?php endforeach; ?>
 </div>

@@ -299,6 +299,27 @@ class PageController
             }
         }
         
+        $feedbackStats = $db->fetchOne("
+            SELECT 
+                COUNT(*) as total,
+                AVG(rating_overall) as avg_overall,
+                AVG(rating_ideas) as avg_ideas,
+                AVG(rating_tasks) as avg_tasks,
+                AVG(rating_ui) as avg_ui,
+                SUM(CASE WHEN rating_overall >= 4 THEN 1 ELSE 0 END) as satisfied,
+                SUM(CASE WHEN rating_overall <= 2 THEN 1 ELSE 0 END) as dissatisfied
+            FROM feedbacks 
+            WHERE rating_overall > 0
+        ") ?? [];
+        
+        $feedbacks = $db->fetchAll("
+            SELECT f.*, u.name as user_name 
+            FROM feedbacks f 
+            LEFT JOIN users u ON f.user_id = u.id 
+            ORDER BY f.created_at DESC 
+            LIMIT 20
+        ");
+        
         $stats = [
             'totalIdeas' => $db->fetchOne("SELECT COUNT(*) as count FROM ideas WHERE user_id = ?", [$user['id']])['count'] ?? 0,
             'totalTasks' => $db->fetchOne("SELECT COUNT(*) as count FROM tasks t JOIN ideas i ON t.idea_id = i.id WHERE i.user_id = ?", [$user['id']])['count'] ?? 0,
@@ -307,7 +328,15 @@ class PageController
             'ideasByPhase' => $db->fetchAll("SELECT phase, COUNT(*) as count FROM ideas WHERE user_id = ? GROUP BY phase", [$user['id']]),
             'tasksByStatus' => $db->fetchAll("SELECT t.status, COUNT(*) as count FROM tasks t JOIN ideas i ON t.idea_id = i.id WHERE i.user_id = ? GROUP BY t.status", [$user['id']]),
             'profitableCount' => $profitableCount,
-            'popularCount' => $popularCount
+            'popularCount' => $popularCount,
+            'feedbackTotal' => $feedbackStats['total'] ?? 0,
+            'avgOverall' => round($feedbackStats['avg_overall'] ?? 0, 1),
+            'avgIdeas' => round($feedbackStats['avg_ideas'] ?? 0, 1),
+            'avgTasks' => round($feedbackStats['avg_tasks'] ?? 0, 1),
+            'avgUi' => round($feedbackStats['avg_ui'] ?? 0, 1),
+            'satisfied' => $feedbackStats['satisfied'] ?? 0,
+            'dissatisfied' => $feedbackStats['dissatisfied'] ?? 0,
+            'feedbacks' => $feedbacks
         ];
         
         $this->render('statistics', ['stats' => $stats, 'user' => $user]);
@@ -346,19 +375,18 @@ class PageController
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = $_POST['message'] ?? '';
             $type = $_POST['type'] ?? 'opinion';
+            $ratingOverall = isset($_POST['rating_overall']) ? (int)$_POST['rating_overall'] : 0;
+            $ratingIdeas = isset($_POST['rating_ideas']) ? (int)$_POST['rating_ideas'] : 0;
+            $ratingTasks = isset($_POST['rating_tasks']) ? (int)$_POST['rating_tasks'] : 0;
+            $ratingUi = isset($_POST['rating_ui']) ? (int)$_POST['rating_ui'] : 0;
             
             if ($message) {
-                $id = sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
-                    mt_rand(0, 0xffff), mt_rand(0, 0xffff),
-                    mt_rand(0, 0xffff), mt_rand(0, 0x0fff) | 0x4000,
-                    mt_rand(0, 0x3fff) | 0x8000,
-                    mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
-                );
+                $id = bin2hex(random_bytes(16));
                 
                 $stmt = $db->getConnection()->prepare(
-                    "INSERT INTO feedbacks (id, user_id, message, type, created_at) VALUES (?, ?, ?, ?, NOW())"
+                    "INSERT INTO feedbacks (id, user_id, message, type, rating_overall, rating_ideas, rating_tasks, rating_ui, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())"
                 );
-                $stmt->execute([$id, $user['id'], $message, $type]);
+                $stmt->execute([$id, $user['id'], $message, $type, $ratingOverall, $ratingIdeas, $ratingTasks, $ratingUi]);
                 
                 $message = 'Köszönjük a visszajelzést!';
             }

@@ -82,10 +82,18 @@ try {
         user_id VARCHAR(36),
         message TEXT,
         type VARCHAR(20) DEFAULT 'opinion',
+        rating_overall INT DEFAULT 0,
+        rating_ideas INT DEFAULT 0,
+        rating_tasks INT DEFAULT 0,
+        rating_ui INT DEFAULT 0,
         created_at TIMESTAMP NULL,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     )");
     $pdo->exec("ALTER TABLE feedbacks ADD COLUMN IF NOT EXISTS message TEXT");
+    $pdo->exec("ALTER TABLE feedbacks ADD COLUMN IF NOT EXISTS rating_overall INT DEFAULT 0");
+    $pdo->exec("ALTER TABLE feedbacks ADD COLUMN IF NOT EXISTS rating_ideas INT DEFAULT 0");
+    $pdo->exec("ALTER TABLE feedbacks ADD COLUMN IF NOT EXISTS rating_tasks INT DEFAULT 0");
+    $pdo->exec("ALTER TABLE feedbacks ADD COLUMN IF NOT EXISTS rating_ui INT DEFAULT 0");
     echo "<p>✅ feedbacks table created</p>";
 } catch (Exception $e) {
     echo "<p>⚠️ feedbacks: " . $e->getMessage() . "</p>";
