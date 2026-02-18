@@ -1,0 +1,8 @@
+.DS_Store
+*.log
+*.tar.gz
+vendor/
+node_modules/
+.idea/
+.vscode/
+*.zip
