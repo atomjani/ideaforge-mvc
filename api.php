@@ -279,6 +279,24 @@ switch ($action) {
         $ctrl->get_all_users();
         break;
     
+    case 'log_analytics':
+        require_once __DIR__ . '/app/models/Analytics.php';
+        $analytics = new Analytics();
+        
+        $sessionId = $_POST['session_id'] ?? '';
+        $pageName = $_POST['page_name'] ?? '/';
+        $currentUrl = $_POST['current_url'] ?? '';
+        $referer = $_POST['referer'] ?? '';
+        $userId = $_SESSION['user_id'] ?? null;
+        
+        if ($sessionId && $pageName) {
+            $analytics->logPageView($sessionId, $userId, $pageName, $currentUrl, $referer);
+        }
+        
+        echo json_encode(['status' => 'ok']);
+        exit;
+        break;
+    
     case 'update_user':
         $ctrl = new UserController();
         $ctrl->update_user();

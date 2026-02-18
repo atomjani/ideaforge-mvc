@@ -93,25 +93,43 @@ $pageTitle = 'Statisztikák';
 <h2 class="text-lg md:text-xl font-semibold mb-3 md:mb-4">Felhasználói elégedettség</h2>
 <div class="bg-white p-3 md:p-6 rounded-lg shadow mb-6">
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <?php 
+        function renderStars($rating, $color) {
+            $fullStars = floor($rating);
+            $hasHalf = ($rating - $fullStars) >= 0.5;
+            $html = '<div class="text-' . $color . '">';
+            for ($i = 1; $i <= 5; $i++) {
+                if ($i <= $fullStars) {
+                    $html .= '★';
+                } elseif ($i == $fullStars + 1 && $hasHalf) {
+                    $html .= '★';
+                } else {
+                    $html .= '<span class="text-gray-300">★</span>';
+                }
+            }
+            $html .= '</div>';
+            return $html;
+        }
+        ?>
         <div class="text-center">
             <div class="text-3xl md:text-4xl font-bold text-indigo-600"><?= $stats['avgOverall'] ?></div>
             <div class="text-xs text-gray-500">Összesített</div>
-            <div class="text-xs text-yellow-500">★</div>
+            <?= renderStars($stats['avgOverall'], 'yellow-400') ?>
         </div>
         <div class="text-center">
             <div class="text-3xl md:text-4xl font-bold text-blue-600"><?= $stats['avgIdeas'] ?></div>
             <div class="text-xs text-gray-500">Ötletek</div>
-            <div class="text-xs text-yellow-500">★</div>
+            <?= renderStars($stats['avgIdeas'], 'yellow-400') ?>
         </div>
         <div class="text-center">
             <div class="text-3xl md:text-4xl font-bold text-green-600"><?= $stats['avgTasks'] ?></div>
             <div class="text-xs text-gray-500">Feladatok</div>
-            <div class="text-xs text-yellow-500">★</div>
+            <?= renderStars($stats['avgTasks'], 'yellow-400') ?>
         </div>
         <div class="text-center">
             <div class="text-3xl md:text-4xl font-bold text-purple-600"><?= $stats['avgUi'] ?></div>
             <div class="text-xs text-gray-500">Kezelőfelület</div>
-            <div class="text-xs text-yellow-500">★</div>
+            <?= renderStars($stats['avgUi'], 'yellow-400') ?>
         </div>
     </div>
     

@@ -299,17 +299,40 @@ class PageController
             }
         }
         
+        $satisfiedUsers = $db->fetchOne("
+            SELECT COUNT(*) as count FROM (
+                SELECT user_id FROM feedbacks 
+                WHERE rating_overall >= 4 
+                GROUP BY user_id
+            ) as satisfied
+        ")['count'] ?? 0;
+        
+        $dissatisfiedUsers = $db->fetchOne("
+            SELECT COUNT(*) as count FROM (
+                SELECT user_id FROM feedbacks 
+                WHERE rating_overall <= 2 AND rating_overall > 0
+                GROUP BY user_id
+            ) as dissatisfied
+        ")['count'] ?? 0;
+        
         $feedbackStats = $db->fetchOne("
             SELECT 
                 COUNT(*) as total,
                 AVG(rating_overall) as avg_overall,
                 AVG(rating_ideas) as avg_ideas,
                 AVG(rating_tasks) as avg_tasks,
-                AVG(rating_ui) as avg_ui,
-                SUM(CASE WHEN rating_overall >= 4 THEN 1 ELSE 0 END) as satisfied,
-                SUM(CASE WHEN rating_overall <= 2 THEN 1 ELSE 0 END) as dissatisfied
-            FROM feedbacks 
-            WHERE rating_overall > 0
+                AVG(rating_ui) as avg_ui
+            FROM (
+                SELECT f1.*
+                FROM feedbacks f1
+                INNER JOIN (
+                    SELECT user_id, MAX(created_at) as max_date
+                    FROM feedbacks
+                    WHERE rating_overall > 0
+                    GROUP BY user_id
+                ) f2 ON f1.user_id = f2.user_id AND f1.created_at = f2.max_date
+                WHERE f1.rating_overall > 0
+            ) as latest_ratings
         ") ?? [];
         
         $feedbacks = $db->fetchAll("
@@ -334,8 +357,8 @@ class PageController
             'avgIdeas' => round($feedbackStats['avg_ideas'] ?? 0, 1),
             'avgTasks' => round($feedbackStats['avg_tasks'] ?? 0, 1),
             'avgUi' => round($feedbackStats['avg_ui'] ?? 0, 1),
-            'satisfied' => $feedbackStats['satisfied'] ?? 0,
-            'dissatisfied' => $feedbackStats['dissatisfied'] ?? 0,
+            'satisfied' => $satisfiedUsers,
+            'dissatisfied' => $dissatisfiedUsers,
             'feedbacks' => $feedbacks
         ];
         
@@ -379,8 +402,26 @@ class PageController
             $ratingIdeas = isset($_POST['rating_ideas']) ? (int)$_POST['rating_ideas'] : 0;
             $ratingTasks = isset($_POST['rating_tasks']) ? (int)$_POST['rating_tasks'] : 0;
             $ratingUi = isset($_POST['rating_ui']) ? (int)$_POST['rating_ui'] : 0;
+            $saveRating = isset($_POST['save_rating']);
             
-            if ($message) {
+            if ($saveRating) {
+                $existing = $db->fetchOne("SELECT id FROM feedbacks WHERE user_id = ? AND rating_overall > 0", [$user['id']]);
+                
+                if ($existing) {
+                    $stmt = $db->getConnection()->prepare(
+                        "UPDATE feedbacks SET rating_overall = ?, rating_ideas = ?, rating_tasks = ?, rating_ui = ? WHERE user_id = ?"
+                    );
+                    $stmt->execute([$ratingOverall, $ratingIdeas, $ratingTasks, $ratingUi, $user['id']]);
+                } else {
+                    $id = bin2hex(random_bytes(16));
+                    $stmt = $db->getConnection()->prepare(
+                        "INSERT INTO feedbacks (id, user_id, message, type, rating_overall, rating_ideas, rating_tasks, rating_ui, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())"
+                    );
+                    $stmt->execute([$id, $user['id'], '', 'rating', $ratingOverall, $ratingIdeas, $ratingTasks, $ratingUi]);
+                }
+                
+                $successMessage = 'Értékelés elmentve!';
+            } elseif ($message || $ratingOverall > 0 || $ratingIdeas > 0 || $ratingTasks > 0 || $ratingUi > 0) {
                 $id = bin2hex(random_bytes(16));
                 
                 $stmt = $db->getConnection()->prepare(
@@ -388,7 +429,9 @@ class PageController
                 );
                 $stmt->execute([$id, $user['id'], $message, $type, $ratingOverall, $ratingIdeas, $ratingTasks, $ratingUi]);
                 
-                $message = 'Köszönjük a visszajelzést!';
+                $successMessage = 'Köszönjük a visszajelzést!';
+            } elseif (!$saveRating) {
+                $errorMessage = 'Kérlek írj üzenetet vagy adj értékelést!';
             }
         }
         
@@ -396,11 +439,13 @@ class PageController
             $feedbacks = $db->fetchAll("SELECT f.*, u.name as user_name, u.email as user_email 
                 FROM feedbacks f LEFT JOIN users u ON f.user_id = u.id 
                 ORDER BY f.created_at DESC LIMIT 50");
+            $userRating = null;
         } else {
             $feedbacks = $db->fetchAll("SELECT * FROM feedbacks WHERE user_id = ? ORDER BY created_at DESC", [$user['id']]);
+            $userRating = $db->fetchOne("SELECT * FROM feedbacks WHERE user_id = ? AND rating_overall > 0 ORDER BY created_at DESC LIMIT 1", [$user['id']]);
         }
         
-        $this->render('feedback', ['feedbacks' => $feedbacks, 'message' => $message ?? null]);
+        $this->render('feedback', ['feedbacks' => $feedbacks, 'message' => $successMessage ?? null, 'error' => $errorMessage ?? null, 'userRating' => $userRating]);
     }
     
     public function guide()
@@ -423,6 +468,35 @@ class PageController
         $this->render('terms');
     }
     
+    public function analytics()
+    {
+        if (!$this->auth->isAdmin()) {
+            $this->redirect('/dashboard');
+            return;
+        }
+        
+        require_once __DIR__ . '/../models/Analytics.php';
+        $analytics = new Analytics();
+        
+        $days = (int)($_GET['days'] ?? 30);
+        if ($days < 1) $days = 1;
+        if ($days > 90) $days = 90;
+        
+        $stats = [
+            'uniqueVisitors' => $analytics->getUniqueVisitors($days),
+            'pageViews' => $analytics->getPageViews($days),
+            'topPages' => $analytics->getTopPages($days, 10),
+            'trafficSources' => $analytics->getTrafficSources($days),
+            'dailyStats' => $analytics->getDailyStats($days),
+            'registrations' => $analytics->getUserRegistrations($days),
+            'avgTimeOnPage' => $analytics->getAvgTimeOnPage($days),
+            'bounceRate' => $analytics->getBounceRate($days),
+            'days' => $days
+        ];
+        
+        $this->render('analytics', ['stats' => $stats]);
+    }
+    
     private function redirect($url)
     {
         header("Location: {$url}");
@@ -433,5 +507,6 @@ class PageController
     {
         http_response_code(404);
         echo "<h1>404 - Oldal nem található</h1>";
+        exit;
     }
 }

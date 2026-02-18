@@ -146,12 +146,36 @@ try {
     $pdo->exec("CREATE TABLE IF NOT EXISTS settings (
         id VARCHAR(36) PRIMARY KEY,
         setting_key VARCHAR(100) UNIQUE,
-        setting_value TEXT
+        setting_value TEXT,
+        created_at TIMESTAMP NULL,
+        updated_at TIMESTAMP NULL
     )");
-    
     echo "<p>✅ settings table created</p>";
 } catch (Exception $e) {
     echo "<p>⚠️ settings: " . $e->getMessage() . "</p>";
+}
+
+try {
+    // Create analytics table
+    $pdo->exec("CREATE TABLE IF NOT EXISTS analytics (
+        id VARCHAR(36) PRIMARY KEY,
+        session_id VARCHAR(64),
+        user_id VARCHAR(36),
+        ip_address VARCHAR(45),
+        user_agent TEXT,
+        referer VARCHAR(500),
+        current_url VARCHAR(500),
+        page_name VARCHAR(100),
+        time_on_page INT DEFAULT 0,
+        event_type VARCHAR(50) DEFAULT 'pageview',
+        created_at TIMESTAMP NULL
+    )");
+    $pdo->exec("CREATE INDEX IF NOT EXISTS idx_analytics_session ON analytics(session_id)");
+    $pdo->exec("CREATE INDEX IF NOT EXISTS idx_analytics_created ON analytics(created_at)");
+    $pdo->exec("CREATE INDEX IF NOT EXISTS idx_analytics_page ON analytics(page_name)");
+    echo "<p>✅ analytics table created</p>";
+} catch (Exception $e) {
+    echo "<p>⚠️ analytics: " . $e->getMessage() . "</p>";
 }
 
 echo "<h2>Done!</h2>";

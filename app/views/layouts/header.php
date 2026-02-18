@@ -37,6 +37,7 @@ $isAdmin = ($_SESSION['user_role'] ?? '') === 'admin';
                         <a href="/statistics" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-100">Statisztikák</a>
                         <a href="/feedback" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-100">Visszajelzés</a>
                         <?php if ($isAdmin): ?>
+                        <a href="/analytics" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-100">Analitika</a>
                         <a href="/admin" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-100">Admin</a>
                         <a href="/newsletter" class="px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-100">Hírlevél</a>
                         <?php endif; ?>
@@ -59,6 +60,7 @@ $isAdmin = ($_SESSION['user_role'] ?? '') === 'admin';
                 <a href="/statistics" class="block px-3 py-2 rounded-md text-base font-medium hover:bg-gray-100">Statisztikák</a>
                 <a href="/feedback" class="block px-3 py-2 rounded-md text-base font-medium hover:bg-gray-100">Visszajelzés</a>
                 <?php if ($isAdmin): ?>
+                <a href="/analytics" class="block px-3 py-2 rounded-md text-base font-medium hover:bg-gray-100">Analitika</a>
                 <a href="/admin" class="block px-3 py-2 rounded-md text-base font-medium hover:bg-gray-100">Admin</a>
                 <a href="/newsletter" class="block px-3 py-2 rounded-md text-base font-medium hover:bg-gray-100">Hírlevél</a>
                 <?php endif; ?>

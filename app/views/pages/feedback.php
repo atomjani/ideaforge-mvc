@@ -11,51 +11,71 @@ $isAdmin = ($_SESSION['user_role'] ?? '') === 'admin';
 </div>
 <?php endif; ?>
 
+<?php if (isset($error)): ?>
+<div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+    <?= htmlspecialchars($error) ?>
+</div>
+<?php endif; ?>
+
+<?php 
+$userRating = $userRating ?? [];
+$ratingOverall = $userRating['rating_overall'] ?? 0;
+$ratingIdeas = $userRating['rating_ideas'] ?? 0;
+$ratingTasks = $userRating['rating_tasks'] ?? 0;
+$ratingUi = $userRating['rating_ui'] ?? 0;
+?>
+
 <div class="bg-white p-6 rounded-lg shadow mb-8">
-    <h2 class="text-lg font-semibold mb-4">Új visszajelzés</h2>
-    <form method="POST">
+    <h2 class="text-lg font-semibold mb-4">Értékelés</h2>
+    <form method="POST" id="ratingForm">
         <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700 mb-2">Értékelés (opcionális)</label>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Értékelés</label>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div class="text-center">
                     <label class="block text-xs text-gray-500 mb-1">Összesített</label>
                     <div class="flex justify-center gap-1">
                         <?php for ($i = 1; $i <= 5; $i++): ?>
-                        <button type="button" class="text-2xl text-gray-300 hover:text-yellow-500" onclick="setRating('overall', <?= $i ?>)" id="star-overall-<?= $i ?>">★</button>
+                        <button type="button" class="text-2xl <?= $i <= $ratingOverall ? 'text-yellow-500' : 'text-gray-300' ?> hover:text-yellow-500" onclick="setRating('overall', <?= $i ?>)" id="star-overall-<?= $i ?>">★</button>
                         <?php endfor; ?>
                     </div>
-                    <input type="hidden" name="rating_overall" id="rating-overall" value="0">
+                    <input type="hidden" name="rating_overall" id="rating-overall" value="<?= $ratingOverall ?>">
                 </div>
                 <div class="text-center">
                     <label class="block text-xs text-gray-500 mb-1">Ötletek</label>
                     <div class="flex justify-center gap-1">
                         <?php for ($i = 1; $i <= 5; $i++): ?>
-                        <button type="button" class="text-2xl text-gray-300 hover:text-yellow-500" onclick="setRating('ideas', <?= $i ?>)" id="star-ideas-<?= $i ?>">★</button>
+                        <button type="button" class="text-2xl <?= $i <= $ratingIdeas ? 'text-yellow-500' : 'text-gray-300' ?> hover:text-yellow-500" onclick="setRating('ideas', <?= $i ?>)" id="star-ideas-<?= $i ?>">★</button>
                         <?php endfor; ?>
                     </div>
-                    <input type="hidden" name="rating_ideas" id="rating-ideas" value="0">
+                    <input type="hidden" name="rating_ideas" id="rating-ideas" value="<?= $ratingIdeas ?>">
                 </div>
                 <div class="text-center">
                     <label class="block text-xs text-gray-500 mb-1">Feladatok</label>
                     <div class="flex justify-center gap-1">
                         <?php for ($i = 1; $i <= 5; $i++): ?>
-                        <button type="button" class="text-2xl text-gray-300 hover:text-yellow-500" onclick="setRating('tasks', <?= $i ?>)" id="star-tasks-<?= $i ?>">★</button>
+                        <button type="button" class="text-2xl <?= $i <= $ratingTasks ? 'text-yellow-500' : 'text-gray-300' ?> hover:text-yellow-500" onclick="setRating('tasks', <?= $i ?>)" id="star-tasks-<?= $i ?>">★</button>
                         <?php endfor; ?>
                     </div>
-                    <input type="hidden" name="rating_tasks" id="rating-tasks" value="0">
+                    <input type="hidden" name="rating_tasks" id="rating-tasks" value="<?= $ratingTasks ?>">
                 </div>
                 <div class="text-center">
                     <label class="block text-xs text-gray-500 mb-1">Kezelőfelület</label>
                     <div class="flex justify-center gap-1">
                         <?php for ($i = 1; $i <= 5; $i++): ?>
-                        <button type="button" class="text-2xl text-gray-300 hover:text-yellow-500" onclick="setRating('ui', <?= $i ?>)" id="star-ui-<?= $i ?>">★</button>
+                        <button type="button" class="text-2xl <?= $i <= $ratingUi ? 'text-yellow-500' : 'text-gray-300' ?> hover:text-yellow-500" onclick="setRating('ui', <?= $i ?>)" id="star-ui-<?= $i ?>">★</button>
                         <?php endfor; ?>
                     </div>
-                    <input type="hidden" name="rating_ui" id="rating-ui" value="0">
+                    <input type="hidden" name="rating_ui" id="rating-ui" value="<?= $ratingUi ?>">
                 </div>
             </div>
         </div>
-        
+        <button type="submit" name="save_rating" value="1" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Értékelés mentése</button>
+    </form>
+</div>
+
+<div class="bg-white p-6 rounded-lg shadow mb-8">
+    <h2 class="text-lg font-semibold mb-4">Visszajelzés</h2>
+    <form method="POST">
         <div class="mb-4">
             <label class="block text-sm font-medium text-gray-700 mb-2">Típus</label>
             <div class="flex flex-wrap gap-2 sm:gap-3">
@@ -74,10 +94,10 @@ $isAdmin = ($_SESSION['user_role'] ?? '') === 'admin';
             </div>
         </div>
         <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Üzenet</label>
-            <textarea name="message" required rows="4" class="w-full border rounded px-3 py-2" placeholder="Írd le a visszajelzésed..."></textarea>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Üzenet (opcionális)</label>
+            <textarea name="message" rows="4" class="w-full border rounded px-3 py-2" placeholder="Írd le a visszajelzésed..."></textarea>
         </div>
-        <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">Küldés</button>
+        <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">Visszajelzés küldése</button>
     </form>
 </div>
 

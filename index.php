@@ -36,6 +36,7 @@ $routes = [
     '/profile' => 'profile',
     '/admin' => 'admin',
     '/statistics' => 'statistics',
+    '/analytics' => 'analytics',
     '/newsletter' => 'newsletter',
     '/feedback' => 'feedback',
     '/guide' => 'guide',
